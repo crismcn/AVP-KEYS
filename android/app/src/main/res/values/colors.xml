@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 自适应图标/启动页底色：logo 的“黑”在 gen_icons.py 里被当透明度抠掉，
+         此处补纯黑底，叠出来即原图。 -->
+    <color name="surface_dark">#FF000000</color>
+</resources>

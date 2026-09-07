@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 应用始终为深色：亮色系统下启动也走黑底，避免白闪。 -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <!-- 进程启动期间显示启动画面，Flutter 引擎画出首帧后自动移除 -->
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+    <!-- Flutter UI 初始化期间以及运行期 Flutter UI 背后的窗口底色。 -->
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@color/surface_dark</item>
+    </style>
+</resources>

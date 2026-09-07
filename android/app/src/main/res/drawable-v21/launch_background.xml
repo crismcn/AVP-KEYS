@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Flutter 引擎首帧前的启动画面：纯黑 + 居中 logo（与 App 深色主题一致）。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/surface_dark"/>
+
+    <!-- 居中 logo：gen_icons.py 生成的透明前景图。 -->
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@mipmap/ic_launcher_foreground"/>
+    </item>
+</layer-list>

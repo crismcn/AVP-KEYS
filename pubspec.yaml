@@ -1,0 +1,29 @@
+name: splayer_keygen
+description: 离线签发 SKEY 激活密钥的本地工具（Ed25519，与 tools/keygen.html 字节级一致）。
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  # Ed25519 纯 Dart 实现（RFC 8032），支持从 seed 推导公钥、离线签名验签。
+  cryptography: ^2.7.0
+  # 私钥以 Keystore/EncryptedSharedPreferences 加密落盘。
+  flutter_secure_storage: ^9.2.4
+  # 「导入密钥」走 MainActivity 自带的 SAF 文件选择器（无原生插件依赖，
+  # 避免 file_picker 在 AGP 9 内置 Kotlin 工具链下的构建问题）。
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/logo.png
