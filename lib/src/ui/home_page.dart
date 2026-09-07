@@ -808,7 +808,7 @@ class _HomePageState extends State<HomePage> {
           child: TextField(
             controller: _salesCtrl,
             minLines: 6,
-            maxLines: 18,
+            maxLines: 12,
             keyboardType: TextInputType.multiline,
             style: const TextStyle(
               color: Colors.white,
