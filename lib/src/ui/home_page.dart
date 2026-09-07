@@ -1,10 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../card_prefs.dart';
 import '../crypto/ed25519_service.dart';
-import '../ledger.dart';
 import '../pair_store.dart';
+import '../sales_store.dart';
 import '../theme.dart';
 import 'widgets.dart';
 
@@ -38,6 +41,12 @@ class _HomePageState extends State<HomePage> {
   static const _fileChannel = MethodChannel('splayer.keygen/file_pick');
 
   final PairStore _store = PairStore();
+  final SalesStore _salesStore = SalesStore();
+  final TextEditingController _salesCtrl = TextEditingController();
+  Timer? _salesSaveTimer;
+
+  final CardPrefs _cardPrefs = CardPrefs();
+  final Set<String> _collapsedCardIds = <String>{};
 
   EdKey? _key;
   bool _busy = false;
@@ -46,7 +55,6 @@ class _HomePageState extends State<HomePage> {
   late DateTime _start;
   late DateTime _redeemEnd;
   late DateTime _expiry;
-  int _count = 1;
   List<String> _tokens = const [];
 
   String? _pairHint; // 密钥对区提示
@@ -58,6 +66,15 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _applyNowDefaults();
     _restore();
+    _restoreSales();
+    _restoreCardPrefs();
+  }
+
+  @override
+  void dispose() {
+    _salesSaveTimer?.cancel();
+    _salesCtrl.dispose();
+    super.dispose();
   }
 
   void _applyNowDefaults() {
@@ -98,6 +115,72 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
       setState(() => _pairHint = '读取保存的私钥失败，请重新生成');
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // 销售文案（本地持久化，下次打开自动载入）
+  // -------------------------------------------------------------------------
+  /// 恢复上次文案；恢复成功后再挂输入监听，避免加载过程触发一次无谓落盘。
+  Future<void> _restoreSales() async {
+    final text = await _salesStore.load();
+    if (!mounted) return;
+    if (text != null && text.isNotEmpty) _salesCtrl.text = text;
+    _salesCtrl.addListener(_onSalesChanged);
+  }
+
+  /// 输入即防抖落盘（350ms），写多行时不会每次按键都刷盘。
+  void _onSalesChanged() {
+    _salesSaveTimer?.cancel();
+    _salesSaveTimer = Timer(const Duration(milliseconds: 350), () async {
+      await _salesStore.save(_salesCtrl.text);
+    });
+  }
+
+  Future<void> _copySales() async {
+    final text = _salesCtrl.text.trim();
+    if (text.isEmpty) {
+      showSnack(context, '销售文案为空，请先输入再复制');
+      return;
+    }
+    await copyText(context, text, message: '销售文案已复制');
+  }
+
+  // -------------------------------------------------------------------------
+  // 卡片折叠（本地持久化：下次进入按上次状态展示）
+  // -------------------------------------------------------------------------
+  /// 恢复上次折叠状态；未记录过的卡片默认展开。
+  Future<void> _restoreCardPrefs() async {
+    final collapsed = await _cardPrefs.load();
+    if (!mounted) return;
+    setState(() {
+      _collapsedCardIds
+        ..clear()
+        ..addAll(collapsed);
+    });
+  }
+
+  /// 点击卡片标题：切换展开/折叠并整体覆盖落盘（避免读改写竞态）。
+  void _toggleCard(String id) {
+    setState(() {
+      if (!_collapsedCardIds.remove(id)) _collapsedCardIds.add(id);
+    });
+    unawaited(_cardPrefs.save(_collapsedCardIds));
+  }
+
+  /// 统一构建可折叠卡片；[id] 同时作为折叠状态持久化键。
+  Widget _sectionCard({
+    required String id,
+    required String title,
+    Widget? trailing,
+    required Widget child,
+  }) {
+    return SectionCard(
+      title: title,
+      expanded: !_collapsedCardIds.contains(id),
+      onToggle: () => _toggleCard(id),
+      trailing: trailing,
+      child: child,
+    );
   }
 
   // -------------------------------------------------------------------------
@@ -262,6 +345,22 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  /// 刷新按钮：保留当前跨度平移到「现在」。激活开始=当前整分，激活截止、授权
+  /// 截止各保持原有相对间隔（如 +20 分钟、+365 天），手调过的窗口不会被冲掉。
+  void _refreshNow() {
+    setState(() {
+      final redeemWindow = _redeemEnd.difference(_start);
+      final duration = _expiry.difference(_start);
+      final now = DateTime.now();
+      final top = DateTime(now.year, now.month, now.day, now.hour, now.minute);
+      _start = top;
+      _redeemEnd = top.add(redeemWindow);
+      _expiry = top.add(duration);
+      _genErr = null;
+      _recheckParams();
+    });
+  }
+
   Widget _presetChip({
     required String label,
     required bool selected,
@@ -308,50 +407,30 @@ class _HomePageState extends State<HomePage> {
       activationEndSec: re,
       expirySec: xa,
     );
-    final countErr = validateCount(_count);
     setState(() {
-      _paramHint = timeErr ?? countErr;
+      _paramHint = timeErr;
       _genErr = null;
     });
-    if (timeErr != null || countErr != null) return;
+    if (timeErr != null) return;
 
     setState(() => _busy = true);
     try {
       // 纯 Dart Ed25519 在主 isolate 上签名：先让出一次事件循环，让按钮里的
-      // 「正在生成…」loading 真正画出来；长批中再周期性让位，避免整段卡住。
+      // 「正在生成…」loading 真正画出来。
       await Future<void>.delayed(const Duration(milliseconds: 16));
-      final rows = <String>[];
-      for (var i = 0; i < _count; i++) {
-        rows.add(
-          await signToken(
-            key: _key!,
-            activationStartSec: rs,
-            activationEndSec: re,
-            expirySec: xa,
-          ),
-        );
-        if (_count > 1 && (i + 1) % 8 == 0) {
-          await Future<void>.delayed(Duration.zero);
-        }
-      }
+      final token = await signToken(
+        key: _key!,
+        activationStartSec: rs,
+        activationEndSec: re,
+        expirySec: xa,
+      );
       if (!mounted) return;
-      setState(() => _tokens = rows);
+      setState(() => _tokens = [token]);
     } catch (e) {
       if (mounted) setState(() => _genErr = '$e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-  }
-
-  Future<void> _copyLedger() async {
-    if (_tokens.isEmpty) return;
-    final md = markdownLedger(
-      activationStartSec: _epoch(_start),
-      activationEndSec: _epoch(_redeemEnd),
-      expirySec: _epoch(_expiry),
-      tokens: _tokens,
-    );
-    await copyText(context, md, message: '已复制 Markdown 台账');
   }
 
   // -------------------------------------------------------------------------
@@ -367,9 +446,59 @@ class _HomePageState extends State<HomePage> {
           children: [
             _header(),
             const SizedBox(height: 14),
-            SectionCard(title: '1 · 密钥对', child: _buildPairCard(key)),
-            SectionCard(title: '2 · 激活参数', child: _buildParamCard()),
-            SectionCard(title: '3 · 生成清单', child: _buildGenCard(key)),
+            _sectionCard(
+              id: 'pair',
+              title: '1 · 密钥对',
+              child: _buildPairCard(key),
+            ),
+            _sectionCard(
+              id: 'params',
+              title: '2 · 激活参数',
+              trailing: IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                tooltip: '按当前时刻刷新（保留所选时长与激活窗口）',
+                icon: const Icon(
+                  Icons.refresh,
+                  size: 22,
+                  color: AppColors.accent,
+                ),
+                onPressed: _busy ? null : _refreshNow,
+              ),
+              child: _buildParamCard(),
+            ),
+            _sectionCard(
+              id: 'gen',
+              title: '3 · 生成密钥',
+              trailing: IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                tooltip: key == null
+                    ? '签发激活密钥（需先在「1 · 密钥对」生成/导入私钥）'
+                    : '按当前激活参数签发一枚密钥',
+                icon: _busy
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: AppColors.accent,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.refresh,
+                        size: 22,
+                        color: AppColors.accent,
+                      ),
+                onPressed: _busy ? null : _generate,
+              ),
+              child: _buildGenCard(key),
+            ),
+            _sectionCard(
+              id: 'sales',
+              title: '4 · 销售文案',
+              child: _buildSalesCard(),
+            ),
           ],
         ),
       ),
@@ -427,7 +556,7 @@ class _HomePageState extends State<HomePage> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _busy ? null : _importFromFile,
-                icon: const Icon(Icons.folder_open, size: 18),
+                icon: const Icon(Icons.file_open_outlined, size: 18),
                 label: const Text('导入密钥'),
               ),
             ),
@@ -603,11 +732,6 @@ class _HomePageState extends State<HomePage> {
               style: const TextStyle(fontSize: 12, color: AppColors.warn),
             ),
           ),
-        const SizedBox(height: 8),
-        CountStepper(
-          value: _count,
-          onChanged: (v) => setState(() => _count = v),
-        ),
       ],
     );
   }
@@ -616,23 +740,30 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: (_busy || key == null) ? null : _generate,
-            icon: _busy
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.black,
-                    ),
-                  )
-                : const Icon(Icons.key_rounded, size: 18),
-            label: Text(_busy ? '正在生成…' : '生成密钥'),
+        if (key == null)
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Text(
+              '先在「1 · 密钥对」生成或导入私钥，再点本卡右上角刷新图标签发。',
+              style: TextStyle(
+                fontSize: 11.5,
+                height: 1.5,
+                color: AppColors.textMuted,
+              ),
+            ),
+          )
+        else if (_tokens.isEmpty && !_busy)
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Text(
+              '点本卡右上角刷新图标，按当前激活参数当场签发一枚密钥。',
+              style: TextStyle(
+                fontSize: 11.5,
+                height: 1.5,
+                color: AppColors.textMuted,
+              ),
+            ),
           ),
-        ),
         if (_genErr != null)
           Padding(
             padding: const EdgeInsets.only(top: 6),
@@ -643,14 +774,59 @@ class _HomePageState extends State<HomePage> {
           ),
         if (_tokens.isNotEmpty) ...[
           const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: _copyLedger,
-            icon: const Icon(Icons.table_chart_outlined, size: 18),
-            label: const Text('复制台账'),
-          ),
-          const SizedBox(height: 8),
           for (var i = 0; i < _tokens.length; i++) _keyTile(i, _tokens[i]),
         ],
+      ],
+    );
+  }
+
+  Widget _buildSalesCard() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          '文案只在本地保存，下次打开自动载入；可含激活步骤 / 交付说明，一键整段复制',
+          style: TextStyle(
+            fontSize: 10.5,
+            height: 1.5,
+            color: AppColors.textMuted,
+          ),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: _copySales,
+          icon: const Icon(Icons.copy_all_outlined, size: 18),
+          label: const Text('复制口径'),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.fieldFill,
+            border: Border.all(color: AppColors.fieldBorder),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: TextField(
+            controller: _salesCtrl,
+            minLines: 2,
+            maxLines: 6,
+            keyboardType: TextInputType.multiline,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              height: 1.6,
+            ),
+            decoration: const InputDecoration(
+              hintText: '销售文案…',
+              hintStyle: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 12.5,
+                height: 1.6,
+              ),
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+              border: InputBorder.none,
+            ),
+          ),
+        ),
       ],
     );
   }

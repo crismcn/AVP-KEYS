@@ -28,17 +28,31 @@ String fmtDateTime(DateTime dt) {
 }
 
 /// 卡片分节（对应网页 section + h2）。
+///
+/// 标题整行可点击：折叠/展开卡片（右侧箭头指示当前状态）。折叠状态由外部持有
+/// （[expanded]/[onToggle]），便于页面层做本地持久化；收起时 [child] 不参与布局，
+/// [trailing]（如刷新按钮）仅随标题行保留。
 class SectionCard extends StatelessWidget {
-  const SectionCard({super.key, required this.title, required this.child});
+  const SectionCard({
+    super.key,
+    required this.title,
+    required this.child,
+    required this.expanded,
+    required this.onToggle,
+    this.trailing,
+  });
 
   final String title;
   final Widget child;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      padding: EdgeInsets.fromLTRB(14, 6, 6, expanded ? 14 : 8),
       decoration: BoxDecoration(
         color: AppColors.card,
         border: Border.all(color: AppColors.cardBorder),
@@ -47,13 +61,35 @@ class SectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  color: AppColors.accent,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700)),
-          const SizedBox(height: 10),
-          child,
+          InkWell(
+            onTap: onToggle,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 6, 8, 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(title,
+                        style: const TextStyle(
+                            color: AppColors.accent,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                  ?trailing,
+                  const SizedBox(width: 4),
+                  Icon(
+                    expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 20,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (expanded) ...[
+            const SizedBox(height: 4),
+            child,
+          ],
         ],
       ),
     );
