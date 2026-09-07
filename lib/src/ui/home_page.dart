@@ -807,8 +807,8 @@ class _HomePageState extends State<HomePage> {
           ),
           child: TextField(
             controller: _salesCtrl,
-            minLines: 2,
-            maxLines: 6,
+            minLines: 6,
+            maxLines: 18,
             keyboardType: TextInputType.multiline,
             style: const TextStyle(
               color: Colors.white,
@@ -834,50 +834,43 @@ class _HomePageState extends State<HomePage> {
   Widget _keyTile(int index, String token) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
       decoration: BoxDecoration(
         color: AppColors.fieldFill,
         border: Border.all(color: AppColors.fieldBorder),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '激活区间  ${fmtDateTime(_start)} → ${fmtDateTime(_redeemEnd)}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppColors.time,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '授权截止  ${fmtDateTime(_expiry)}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppColors.time,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  formatKey(token),
-                  style: kMono.copyWith(color: Colors.white, fontSize: 10.5),
-                ),
-              ],
+          Text(
+            '激活区间  ${fmtDateTime(_start)} → ${fmtDateTime(_redeemEnd)}',
+            style: const TextStyle(
+              fontSize: 10,
+              color: AppColors.time,
+              height: 1.4,
             ),
           ),
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            tooltip: '复制密钥',
-            icon: const Icon(Icons.copy, size: 18),
-            color: AppColors.accent,
+          const SizedBox(height: 2),
+          Text(
+            '授权截止  ${fmtDateTime(_expiry)}',
+            style: const TextStyle(
+              fontSize: 10,
+              color: AppColors.time,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            formatKey(token),
+            style: kMono.copyWith(color: Colors.white, fontSize: 10.5),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
             onPressed: () =>
                 copyText(context, '激活密钥：$token', message: '#${index + 1} 已复制'),
+            icon: const Icon(Icons.copy_all_outlined, size: 18),
+            label: const Text('复制密钥'),
           ),
         ],
       ),
