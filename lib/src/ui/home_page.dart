@@ -832,9 +832,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _keyTile(int index, String token) {
-    final window =
-        '激活 ${fmtLocal(_epoch(_start))} → ${fmtLocal(_epoch(_redeemEnd))}'
-        '　授权至 ${fmtLocal(_epoch(_expiry))}';
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
@@ -845,31 +842,28 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Row(
         children: [
-          SizedBox(
-            width: 26,
-            child: Text(
-              '#${index + 1}',
-              style: const TextStyle(
-                color: AppColors.accent,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  window,
+                  '激活区间  ${fmtDateTime(_start)} → ${fmtDateTime(_redeemEnd)}',
                   style: const TextStyle(
                     fontSize: 10,
                     color: AppColors.time,
-                    height: 1.3,
+                    height: 1.4,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
+                Text(
+                  '授权截止  ${fmtDateTime(_expiry)}',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppColors.time,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 4),
                 Text(
                   formatKey(token),
                   style: kMono.copyWith(color: Colors.white, fontSize: 10.5),
