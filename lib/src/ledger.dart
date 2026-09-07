@@ -8,7 +8,7 @@ String markdownLedger({
   required List<String> tokens,
 }) {
   final buf = StringBuffer()
-    ..writeln('# 激活密钥台账（SKEY 密钥生成器 生成，请勿外传）')
+    ..writeln('# 激活密钥台账（AVP KEYS 密钥生成器 生成，请勿外传）')
     ..writeln()
     ..writeln(
       '- 激活窗口：${fmtLocal(activationStartSec)} → '
@@ -33,7 +33,7 @@ String backupText({
   required String privatePkcs8B64,
   required String publicHex,
 }) {
-  return 'SKEY 激活密钥 私钥备份（切勿外传）\n\n'
+  return 'AVP KEYS 激活密钥 私钥备份（切勿外传）\n\n'
       '私钥 (PKCS8 base64):\n'
       '$privatePkcs8B64\n\n'
       '公钥 (hex, 粘贴进 lib/features/activation/activation_public.dart):\n'

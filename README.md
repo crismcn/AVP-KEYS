@@ -1,6 +1,6 @@
-# SKEY 密钥生成器（Android 本地工具）
+# AVP KEYS（Android 本地工具）
 
-离线签发 SKEY 激活密钥的安卓 App。签名规则、输出格式与网页版
+离线签发 AVP KEYS 激活密钥的安卓 App。签名规则、输出格式与网页版
 `../tools/keygen.html` **字节级一致**，两边的密钥对 / 备份可互换续用。
 
 ## 特性

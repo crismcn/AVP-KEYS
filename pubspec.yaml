@@ -1,5 +1,5 @@
 name: splayer_keygen
-description: 离线签发 SKEY 激活密钥的本地工具（Ed25519，与 tools/keygen.html 字节级一致）。
+description: 离线签发 AVP KEYS 激活密钥的本地工具（Ed25519，与 tools/keygen.html 字节级一致）。
 publish_to: 'none'
 version: 1.0.0+1
 

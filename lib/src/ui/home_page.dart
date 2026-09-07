@@ -29,6 +29,7 @@ const List<({int minutes, String label})> _quickPresets = [
   (minutes: 365 * 1440, label: '365 天'),
   (minutes: 9999 * 1440, label: '永久'),
 ];
+
 /// 快捷档固定短激活窗口（分钟）。
 const int _presetRedeemWindowMin = 20;
 
@@ -254,8 +255,7 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       final now = DateTime.now();
       _start = DateTime(now.year, now.month, now.day, now.hour, now.minute);
-      _redeemEnd =
-          _start.add(const Duration(minutes: _presetRedeemWindowMin));
+      _redeemEnd = _start.add(const Duration(minutes: _presetRedeemWindowMin));
       _expiry = _start.add(Duration(minutes: minutes));
       _genErr = null;
       _recheckParams();
@@ -395,7 +395,7 @@ class _HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'SKEY 密钥生成器',
+                'AVP KEYS',
                 style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
               ),
             ],
@@ -706,11 +706,8 @@ class _HomePageState extends State<HomePage> {
             tooltip: '复制密钥',
             icon: const Icon(Icons.copy, size: 18),
             color: AppColors.accent,
-            onPressed: () => copyText(
-              context,
-              '激活密钥：$token',
-              message: '#${index + 1} 已复制',
-            ),
+            onPressed: () =>
+                copyText(context, '激活密钥：$token', message: '#${index + 1} 已复制'),
           ),
         ],
       ),

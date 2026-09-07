@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart' as cg;
 
-/// SKEY 激活密钥的 Ed25519 服务。
+/// AVP KEYS 激活密钥的 Ed25519 服务。
 ///
 /// 输出格式与 tools/keygen.html（WebCrypto 版）**字节级一致**，便于跨工具续用：
 /// 私钥 = PKCS8 DER base64、公钥 = 32B 小写 hex、密钥串 = 「21B claims ‖ 64B 签名」
