@@ -28,10 +28,11 @@ python3 tools/gen_icons.py
 ```
 
 它从根目录 `logo.png` 一次性写出自适应图标（`ic_launcher_foreground` /
-`ic_launcher_monochrome`，供 `mipmap-anydpi-v26` 用）与旧版 `ic_launcher`，
-启动画面（`drawable*/launch_background.xml`）居中 logo 复用的正是前景图层，
-所以重跑后启动图标也会自动更新。产物还含 `design/logo-mark.png` 与
-`design/play-store-icon-512.png`。
+`ic_launcher_monochrome`，供 `mipmap-anydpi-v26` 用）、旧版 `ic_launcher`，
+以及 Android 12+ 启动画面专用的 `ic_splash`（整幅图缩到系统圆形裁切区内，
+所以比启动器图标小一圈）；12 以下的启动画面（`drawable*/launch_background.xml`）
+居中 logo 复用的仍是前景图层。重跑后启动图标与启动画面都会自动更新。产物还含
+`design/logo-mark.png` 与 `design/play-store-icon-512.png`。
 
 ## 使用
 

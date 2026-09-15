@@ -13,6 +13,8 @@ the PNGs.
   mipmap-*/ic_launcher_monochrome.png  a crisp silhouette of the mark alone, for
       Android 13+ themed icons.
   mipmap-*/ic_launcher.png             the whole square, opaque, for pre-O.
+  mipmap-*/ic_splash.png               the artwork pulled back towards the middle
+      of the canvas, for the Android 12+ splash screen.
   design/logo-mark.png                 the artwork on transparency, full size.
   design/play-store-icon-512.png       Play Console listing icon (no alpha).
 
@@ -30,6 +32,15 @@ alone, and the foreground's alpha includes the decorative rings (they reach
 brightness 115 out of 255), which would come back as a muddy halo. The mark's
 body is above MONO_HI and nothing else is, so a separate high threshold gives a
 clean silhouette that still lines up, because it is cut from the same 1:1 canvas.
+
+A third thing, and the reason ic_splash exists. The launcher masks the artwork
+with a squircle, so the master bleeds to the edges on purpose: outside the
+squircle is black, i.e. transparent, and the mask supplies the rounded corner.
+The Android 12 splash screen does not use that mask -- it clips the icon to a
+circle -- so handing it ic_launcher slices the artwork's corners off. ic_splash
+is the same artwork scaled down until all of it, decorative rings included, sits
+inside that circle. That is why the splash logo is smaller than the launcher one;
+it is the whole artwork rather than a squircle-shaped cut of it.
 """
 
 import pathlib
@@ -53,6 +64,12 @@ DENSITIES = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
 MONO_CORE = 80
 SPECK_THRESHOLD = 200
 SPECK_CONTEXT = 25
+# How far the artwork may reach on the splash icon, in dp on the 108dp canvas.
+# The Android 12 splash clips to a 36dp circle, so this is that circle minus a
+# little room for the antialiased edge -- 33dp leaves the mark filling ~92% of
+# the circle. Do not raise it to 36: the crop lands on the artwork's soft edge
+# and reads as a slice, which is the bug ic_splash was added to fix.
+SPLASH_TARGET_DP = 33.0
 
 
 def max_channel(rgb):
@@ -131,14 +148,21 @@ def monochrome(rgb):
     return out
 
 
-def mark_radius_dp(mono):
-    """How far the mark reaches from the canvas centre, in dp on the 108dp
-    canvas. Measured along the real outline rather than the bounding box, whose
-    half-diagonal badly overstates the reach of a shape with rounded corners."""
-    w, h = mono.size
+def radius_dp(image):
+    """How far anything visible in `image` reaches from the canvas centre, in dp
+    on the 108dp canvas. Measured along the real outline rather than the bounding
+    box, whose half-diagonal badly overstates the reach of a shape with rounded
+    corners.
+
+    Which layer you pass decides what counts. Pass `mono` to size the launcher
+    layers: the decorative rings may run off into a squircle's corners there, and
+    holding the mark back for them would shrink it for nothing. Pass the full
+    foreground to size the splash icon, which is clipped to a circle and so has
+    no corner to hide them in."""
+    w, h = image.size
     cx, cy = (w - 1) / 2, (h - 1) / 2
     best = 0.0
-    for i, a in enumerate(mono.getchannel("A").getdata()):
+    for i, a in enumerate(image.getchannel("A").getdata()):
         if a >= 8:
             best = max(best, ((i % w - cx) ** 2 + (i // w - cy) ** 2) ** 0.5)
     return best / (w / 2) * (FG_CANVAS_DP / 2)
@@ -172,16 +196,24 @@ def main():
 
     foreground = unpremultiplied(clean)
     mono = monochrome(clean)
-    reach = mark_radius_dp(mono)
+    reach = radius_dp(mono)
     if reach > SAFE_RADIUS_DP:
         scale = SAFE_TARGET_DP / reach
         print(f"mark reaches {reach:.1f}dp > {SAFE_RADIUS_DP:.0f}dp safe radius "
               f"-> insetting adaptive layers to {scale * 100:.1f}%")
         foreground = inset(foreground, scale)
         mono = inset(mono, scale)
-        reach = mark_radius_dp(mono)
+        reach = radius_dp(mono)
     verdict = "INSIDE" if reach <= SAFE_RADIUS_DP else "CLIPPED BY SOME MASKS"
     print(f"mark reaches {reach:.1f}dp of the {SAFE_RADIUS_DP:.0f}dp safe radius -> {verdict}")
+
+    splash = foreground
+    splash_reach = radius_dp(splash)
+    if splash_reach > SPLASH_TARGET_DP:
+        scale = SPLASH_TARGET_DP / splash_reach
+        print(f"artwork reaches {splash_reach:.1f}dp, past the {SAFE_RADIUS_DP:.0f}dp "
+              f"circle the Android 12 splash clips to -> splash icon at {scale * 100:.1f}%")
+        splash = inset(splash, scale)
 
     DESIGN.mkdir(exist_ok=True)
     foreground.save(DESIGN / "logo-mark.png")
@@ -191,6 +223,7 @@ def main():
         for image, name, dp in (
             (foreground, "ic_launcher_foreground", FG_CANVAS_DP),
             (mono, "ic_launcher_monochrome", FG_CANVAS_DP),
+            (splash, "ic_splash", FG_CANVAS_DP),
             (clean, "ic_launcher", LEGACY_DP),
         ):
             path, size = emit(image, density, name, dp)

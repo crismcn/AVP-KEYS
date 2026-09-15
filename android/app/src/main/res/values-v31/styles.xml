@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Android 12+ 的系统启动画面：黑底 + App 图标，与旧版本画面对齐。 -->
+    <!-- Android 12+ 的系统启动画面：黑底 + App 图标，与旧版本画面对齐。
+         图标用 ic_splash 而不是 ic_launcher：这一档系统把图标裁成圆形，
+         而 ic_launcher 的前景是按「直角由启动器方圆蒙版补上」设计的满幅图，
+         交进去会把四周切掉，所以 gen_icons.py 另出一张缩到圆内的 ic_splash。 -->
     <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@drawable/launch_background</item>
         <item name="android:windowSplashScreenBackground">@color/surface_dark</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_splash</item>
     </style>
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@color/surface_dark</item>
