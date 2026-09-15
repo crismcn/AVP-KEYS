@@ -30,7 +30,7 @@ const List<({int minutes, String label})> _quickPresets = [
   (minutes: 7 * 1440, label: '7 天'),
   (minutes: 30 * 1440, label: '30 天'),
   (minutes: 365 * 1440, label: '365 天'),
-  (minutes: 9999 * 1440, label: '永久'),
+  (minutes: 36500 * 1440, label: '永久'),
 ];
 
 /// 快捷档固定短激活窗口（分钟）。
