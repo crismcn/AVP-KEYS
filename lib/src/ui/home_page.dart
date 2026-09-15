@@ -21,7 +21,7 @@ class HomePage extends StatefulWidget {
 enum _WhichTime { start, redeemEnd, expiry }
 
 /// 授权时长快捷档（与网页版 tools/keygen.html 一致）：点一下按当前时刻重置三项——
-/// 激活开始=现在（整分）、激活截止=+20 分钟、授权截止=现在+所选时长。永久=20000 天。
+/// 激活开始=现在（整分）、激活截止=+20 分钟、授权截止=现在+所选时长。永久=26771 天。
 const List<({int minutes, String label})> _quickPresets = [
   (minutes: 30, label: '30 分钟'),
   (minutes: 60, label: '1 小时'),
@@ -30,7 +30,7 @@ const List<({int minutes, String label})> _quickPresets = [
   (minutes: 7 * 1440, label: '7 天'),
   (minutes: 30 * 1440, label: '30 天'),
   (minutes: 365 * 1440, label: '365 天'),
-  (minutes: 20000 * 1440, label: '永久'),
+  (minutes: 26771 * 1440, label: '永久'),
 ];
 
 /// 快捷档固定短激活窗口（分钟）。
